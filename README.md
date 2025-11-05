@@ -1,8 +1,8 @@
 # Advanced Cloud Development Technologies Coursework 1
 
 This project is being developed to meet the following criteria:
+    
     Outcomes – No. & Title 
-
     A1 – Analyse and compare Cloud container solutions.
     B1 – Plan and deploy a robust source control strategy.
     B3 – Design, implement and analyse Cloud container solutions.
