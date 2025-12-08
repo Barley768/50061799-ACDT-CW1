@@ -1,0 +1,3 @@
+API Key = eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY5ZTEyZDM1ZmU4OTQ2ZWViN2QwYjI4M2Q4OGM4OWQwIiwiaCI6Im11cm11cjY0In0=
+
+Would be an environment variable in real project

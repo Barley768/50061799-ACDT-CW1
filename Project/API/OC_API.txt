@@ -1,0 +1,3 @@
+API Key = d863673d7e8647139b4face8079ed7ff
+
+Would be an environment variable in real project
