@@ -154,7 +154,7 @@ def get_geocode(query: str, limit: int = 1) -> List[dict]:
     }
     data = API_Get(openCageBase, params=params)
 
-    results = []
+    results: list[dict] = []
     for res in data.get("results", []):
         geom = res.get("geometry", {})
         results.append({
