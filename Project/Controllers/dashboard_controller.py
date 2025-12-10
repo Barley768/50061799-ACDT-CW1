@@ -52,7 +52,43 @@ class DashboardController:
                 , dest_label=dest_geo["formatted"]
             )
 
+            month_counts, month_labels, month_tooltips = self.holiday_frequency(holidays)
+            country_name = country_info.get("name", "Unknown Country")
+
+            self.view.plot_holiday_frequency(month_counts, month_labels, country_name, month_tooltips)
+
         except API_Error as e:
             self.view.show_error("API error", str(e))
         except Exception as e:
             self.view.show_error("Unexpected error", f"{type(e).__name__}: {e}")
+
+    def holiday_frequency(self, holidays: list[dict]) -> tuple[list[int], list[str], list[str]]:
+        month_counts = [0] * 12
+        month_holiday_names: list[list[str]] = [[] for _ in range(12)]
+
+        for h in holidays:
+            date_str = h.get("date", "")
+            name = h.get("localName", h.get("name", "Unnamed holiday"))
+
+            parts = date_str.split("-")
+            if len(parts) >= 2:
+                try:
+                    month_index = int(parts[1]) - 1
+                    if 0 <= month_index < 12:
+                        month_counts[month_index] += 1
+                        month_holiday_names[month_index].append(name)
+                except ValueError:
+                    continue
+
+        month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"
+                        , "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        
+        # Tooltip
+        month_tooltips: list[str] = []
+        for names in month_holiday_names:
+            if not names:
+                month_tooltips.append("No holidays")
+            else:
+                month_tooltips.append(", ".join(names))
+
+        return month_counts, month_labels, month_tooltips

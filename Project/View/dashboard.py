@@ -15,8 +15,10 @@ class dashboard(tk.Tk):
         self.geometry(f"{int(screen_width * 0.9)}x{int(screen_height * 0.9)}")
         self.state("zoomed")
 
+        # Set references for Matplotlib
         self.weather_canvas = None
         self.temp_canvas = None
+        self.holiday_canvas = None
 
         self.build_ui()
 
@@ -88,6 +90,10 @@ class dashboard(tk.Tk):
         self.compare_temp_frame = ttk.Frame(self.tab, padding=10)
         self.tab.add(self.compare_temp_frame, text="Origin Temp vs Destination Temp")
 
+        # Tab 3
+        self.holiday_chart_frame = ttk.Frame(self.tab, padding=10)
+        self.tab.add(self.holiday_chart_frame, text= "Holiday Frequency")
+
     # UI to Controller
     def on_analyse_button(self):
         if self.controller is not None:
@@ -142,6 +148,30 @@ class dashboard(tk.Tk):
 
         self.holidays_label.config(text=holidays_text)
 
+    # Destroy stored canvas if it exists
+    def destroy_canvas(self, canvas_attr: str):
+        canvas = getattr(self, canvas_attr, None)
+        if canvas is not None:
+            try:
+                canvas.get_tk_widget().destroy
+            except Exception:
+                pass
+            setattr(self, canvas_attr, None)
+
+    # Create Chart
+    def new_chart(self, canvas_attr: str, master_frame, figsize=(6,3), dpi=100):
+        self.destroy_canvas(canvas_attr)
+
+        fig = Figure(figsize=figsize, dpi=dpi)
+        ax = fig.add_subplot(111)
+
+        canvas = FigureCanvasTkAgg(fig, master=master_frame)
+        setattr(self, canvas_attr, canvas)
+
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        return fig, ax
+
     # Plot weather into chart TAB 1
     def plot_weather(self, weather: dict):
         times = weather.get("times", [])
@@ -151,12 +181,7 @@ class dashboard(tk.Tk):
             self.show_warning("Weather", "No weather data available to plot.")
             return
 
-        if self.weather_canvas is not None:
-            self.weather_canvas.get_tk_widget().destroy()
-            self.weather_canvas = None
-
-        fig = Figure(figsize=(6, 3), dpi=100)
-        ax = fig.add_subplot(111)
+        fig, ax = self.new_chart("weather_canvas", self.dest_temp_frame)
 
         # Make time more readable
         short_times = []
@@ -174,9 +199,7 @@ class dashboard(tk.Tk):
 
         fig.tight_layout()
 
-        self.weather_canvas = FigureCanvasTkAgg(fig, master=self.dest_temp_frame)
         self.weather_canvas.draw()
-        self.weather_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     # Plot Weather comparison into chart TAB 2
     def plot_compare_weather(self, origin_weather: dict, dest_weather: dict,
@@ -197,12 +220,7 @@ class dashboard(tk.Tk):
         dest_temps = dest_temps[:n]
         x_values = list(range(n))
 
-        if self.temp_canvas is not None:
-            self.temp_canvas.get_tk_widget().destroy()
-            self.temp_canvas = None
-
-        fig = Figure(figsize=(6,3), dpi=100)
-        ax = fig.add_subplot(111)
+        fig, ax = self.new_chart("temp_canvas", self.compare_temp_frame)
 
         ax.plot(x_values, origin_temps, marker="o", label=f"Origin: {origin_label}")
         ax.plot(x_values, dest_temps, marker="o", linestyle="--", label=f"Destination: {dest_label}")
@@ -215,6 +233,70 @@ class dashboard(tk.Tk):
 
         fig.tight_layout()
 
-        self.compare_canvas = FigureCanvasTkAgg(fig, master=self.compare_temp_frame)
-        self.compare_canvas.draw()
-        self.compare_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.temp_canvas.draw()
+
+    # Plot Holiday frequency into chart TAB 3
+    def plot_holiday_frequency(self, month_counts: list[int], month_labels: list[str], country_name: str, month_tooltips: list[str]):
+        if not month_counts or not month_labels:
+            self.show_warning("Holiday Frequency", "No holiday data available to plot.")
+            return
+        
+        fig, ax = self.new_chart("holiday_canvas", self.holiday_chart_frame)
+
+        fig.subplots_adjust(right=0.75, left=0.25)
+
+        bars = ax.bar(month_labels, month_counts)
+
+        ax.set_title(f"Public Holidays per month in {country_name}")
+        ax.set_xlabel("Month")
+        ax.set_ylabel("Number of Holidays")
+        ax.tick_params(axis="x", rotation=45)
+        #fig.tight_layout()
+
+        # Tooltip references
+        self.holiday_fig = fig
+        self.holiday_ax = ax
+        self.holiday_bars = bars
+        self.holiday_month_labels = month_labels
+        self.holiday_month_counts = month_counts
+        self.holiday_tooltips = month_tooltips
+
+        annot = ax.annotate(
+            ""
+            , xy=(0,0)
+            , xytext=(10, -25)
+            , textcoords=("offset points")
+            , bbox=dict(boxstyle="round", fc="white", ec="black", alpha=1.0)
+            , arrowprops=dict(arrowstyle="->", color="black")
+        )
+        annot.set_visible(False)
+        self.holiday_annot = annot
+
+        # hover event
+        def on_move(event):
+            if event.inaxes == ax:
+                visible = False
+                for i, bar in enumerate(bars):
+                    contains, _ = bar.contains(event)
+                    if contains:
+                        x = bar.get_x() + bar.get_width() / 2
+                        y = bar.get_height()
+                        annot.xy = (x,y)
+
+                        label = month_labels[i]
+                        count = month_counts[i]
+                        tooltip = month_tooltips[i]
+
+                        annot.set_text(f"{label}: {count} holidays\n{tooltip}")
+                        annot.set_visible(True)
+                        self.holiday_canvas.draw_idle()
+                        visible=True
+                        break
+                
+                if not visible and annot.get_visible():
+                    annot.set_visible(False)
+                    self.holiday_canvas.draw_idle()
+
+        self.holiday_hover_cid = fig.canvas.mpl_connect("motion_notify_event", on_move)
+
+        self.holiday_canvas.draw()
