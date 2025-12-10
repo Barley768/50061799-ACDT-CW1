@@ -1,3 +1,10 @@
+"""
+Docstring for logistics:
+Business logic used to gather data from API_wrapper APIs for use in analysing travel routes
+Returns origin/destination, route info, weather info,
+relevant country info and relevant holiday info
+"""
+
 from API.API_wrapper import (
     get_first_geocode
     , get_route_summary
@@ -8,8 +15,10 @@ from API.API_wrapper import (
 )
 
 class logistics:
+    """Holds logic for analysing a route and country information between two locations"""
 
     def analyse_route(self, origin: str, destination: str, year: int, hours: int = 24) -> dict:
+        """Analyses the route between two locations"""
         # Geocoding
         origin_geo = get_first_geocode(origin)
         dest_geo = get_first_geocode(destination)

@@ -1,3 +1,14 @@
+"""
+Docstring for API_wrapper:
+This module collects all external API calls into a single module, returning cleaned dicts/lists
+and includes error handling. Makes use of the following APIs:
+ - "REST Countries API" to gather country metadata
+ - "Open-Meteo" for hourly weather forecasts
+ - "Nager.Date" for public holiday data
+ - "OpenRouteService" for route distance and travel duration
+ - "OpenCage" to convert country/city locations into latitude/longitude (geocoding)
+"""
+
 from typing import List, Optional
 import requests
 
@@ -9,9 +20,11 @@ OPENCAGE_API_KEY = "d863673d7e8647139b4face8079ed7ff"
 # Error Handling
 
 class API_Error(Exception):
+    """Custom error handling for all API calls"""
     pass
 
 def API_Get(url: str, *, params: dict | None = None, headers: dict | None = None, timeout: int = 10) -> dict:
+    """Generic GET request handler for API calls"""
     try:
         response = requests.get(url, params=params, headers=headers, timeout=timeout)
     except requests.exceptions.Timeout as exc:
@@ -36,6 +49,7 @@ def API_Get(url: str, *, params: dict | None = None, headers: dict | None = None
 countryBase = "https://restcountries.com/v3.1"
 
 def get_country(name: str) -> dict:
+    """Return country metadata from REST Countries API"""
     url = f"{countryBase}/name/{name}"
     data = API_Get(url)
 
@@ -63,6 +77,7 @@ openMeteoBase = "https://api.open-meteo.com/v1/forecast"
 def get_weather(latitude: float, longitude: float,
                 hourly_params: str = "temperature_2m,precipitation,wind_speed_10m",
                 hours: int= 24) -> dict:
+    """Returns weather forecast from Open-Meteo"""
     
     params = {
         "latitude" : latitude
@@ -94,11 +109,13 @@ def get_weather(latitude: float, longitude: float,
 nagerBase = "https://date.nager.at/api/v3"
 
 def get_holidays(year: int, country_code: str) -> List[dict]:
+    """Returns holiday information from Nager.Date"""
     url = f"{nagerBase}/PublicHolidays/{year}/{country_code}"
     data = API_Get(url)
     return data
 
 def get_upcoming_holidays(year: int, country_code: str, limit: int = 5) -> List[dict]:
+    """Returns limited number of upcoming holidays"""
     holidays = get_holidays(year, country_code)
     return holidays[:limit]
 
@@ -108,6 +125,7 @@ ORSBase = "https://api.openrouteservice.org/v2/directions/driving-car"
 
 def get_route_summary(start_lon: float, start_lat: float, 
                       end_lon: float, end_lat: float) -> dict:
+    """Returns route distance and trip duration from OpenRouteService"""
     
     api_key = ORS_API_KEY
     if not api_key:
@@ -141,6 +159,7 @@ def get_route_summary(start_lon: float, start_lat: float,
 openCageBase = "https://api.opencagedata.com/geocode/v1/json"
 
 def get_geocode(query: str, limit: int = 1) -> List[dict]:
+    """Convert location name into lat/lng coords using OpenCage"""
 
     api_key = OPENCAGE_API_KEY
     if not api_key:
@@ -166,6 +185,7 @@ def get_geocode(query: str, limit: int = 1) -> List[dict]:
     return results
 
 def get_first_geocode(query: str) -> Optional[dict]:
+    """Return the first listed geocode from OpenCage"""
     results = get_geocode(query, limit=1)
     if not results:
         raise API_Error(f"No geocoding results for '{query}'")

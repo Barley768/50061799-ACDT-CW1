@@ -50,14 +50,22 @@ This project is being developed to meet the following criteria:
 
         [70]
 
-    Management Report Documentation
-        Using your Python solution from Part 1 as an example, produce a report for a multi-faceted management/deployment company why the use of APIs in automating parsing and serialising can boost monitoring management, deployment, functionality, customer experience and service levels as part of a DevOps environment. 
-        In this report discuss speed, security, consistency and how they would benefit from the use of stand-alone APIs and containers.
+## Application Description
+A Travel logistics and risk planning assessment tool
+    This application is a python-based dashboard that makes use of multiple freely available APIs and combines the resulting data to create
+    and display data visualisations to assist in decision making and planning.
 
-        Note: A multi-faceted management/deployment company is a provider that offers a wide range of services to deploy, manage, and support complex IT solutions across multiple environments. These companies handle IT infrastructure, multi-cloud environments, device deployment, and data management, often providing both strategic planning and hands-on implementation and ongoing support along with logistics, forecast planning, real-time delivery/package tracking. 
-        [30]
+## APIs Used:
+1. Rest Countries API               - Returns country metadata
+2. Open-Meteo Weather API           - Returns hourly temperature, precipitation and windspeeds
+3. Nager.Date Public Holidays API   - Returns public holiday information per country
+4. OpenRouteService API             - Returns distance and travel duration between two locations
+5. OpenCage Geocoding API           - Converts location names into latitude/longitude values
 
 ## To get setup:
-1. Clone the Repo
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the script: `python src\main.py`
+1. Clone the Repo: git clone https://github.com/Barley768/50061799-ACDT-CW1.git
+2. Create virtual environment:
+        python -m venv venv
+        venv\Scripts\activate
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the script: `python Project\main.py`

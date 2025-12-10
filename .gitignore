@@ -8,4 +8,4 @@ venv/
 .vscode/
 .idea/
 
-artifacts/
+Project/Output/*

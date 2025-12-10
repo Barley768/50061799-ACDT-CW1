@@ -1,4 +1,9 @@
-from API_wrapper import (
+"""
+Docstring for demo:
+Test document to validate API usage from API_wrapper
+"""
+
+from API.API_wrapper import (
     API_Error
     , get_country
     , get_weather
@@ -18,8 +23,8 @@ def demo():
             print("Could not find one of the locations")
             return
         
-        print(f"Origin: {origin_geo["formatted"]} {origin_geo["lat"]} {origin_geo["lng"]}")
-        print(f"Destination: {dest_geo["formatted"]} {dest_geo["lat"]} {dest_geo["lng"]}")
+        print(f"Origin: {origin_geo['formatted']} {origin_geo['lat']} {origin_geo['lng']}")
+        print(f"Destination: {dest_geo['formatted']} {dest_geo['lat']} {dest_geo['lng']}")
 
         route = get_route_summary(
             start_lon=origin_geo["lng"], start_lat=origin_geo["lat"]
