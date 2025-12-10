@@ -9,6 +9,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 import matplotlib.pyplot as plt
+
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=["#1f77b4", "#ff7f0e", "#2ca02c"])
+plt.rcParams["axes.titlesize"] = 12
+plt.rcParams["axes.labelsize"] = 10
+plt.rcParams["xtick.labelsize"] = 9
+plt.rcParams["ytick.labelsize"] = 9
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
@@ -22,15 +28,23 @@ from email.message import EmailMessage
 
 class dashboard(tk.Tk):
     """Main application GUI for interacting with and visualising data"""
+
     def __init__(self):
         super().__init__()
 
+        # Set style
+        style = ttk.Style(self)
+        style.theme_use("clam")
+
         # Setup screensize
-        self.title("Delivery Routing Analysis Application")
+        self.title("Delivery Routing Analysis Dashboard")
+        self.iconbitmap(str(Path(__file__).resolve().parent / "ACDT Icon.ico"))
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         self.geometry(f"{int(screen_width * 0.9)}x{int(screen_height * 0.9)}")
         self.state("zoomed")
+        self.minsize(900, 600)
+        self.configure(padx=10, pady=10)
 
         # Set references for Matplotlib
         self.weather_canvas = None
@@ -39,6 +53,8 @@ class dashboard(tk.Tk):
         self.risk_canvas = None
 
         self.build_ui()
+        self.origin_entry.focus()
+        self.bind("<Return>", lambda event: self.on_analyse_button())
 
         # Output variables
         self.output_dir = Path("Project") / "Output"
@@ -58,24 +74,28 @@ class dashboard(tk.Tk):
         """Builds all UI elements"""
 
         # Top frame
-        input_frame = ttk.Frame(self, padding=10)
-        input_frame.pack(side=tk.TOP, fill=tk.X)
+        input_frame = ttk.LabelFrame(self, text="Route Input", padding=10)
+        input_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
 
         # Origin point entry
-        ttk.Label(input_frame, text="Origin:").grid(row=0, column=0, sticky="w")
+        ttk.Label(input_frame, text="Origin:").grid(
+            row=0, column=0, sticky="e", padx=(0, 5)
+        )
         self.origin_entry = ttk.Entry(input_frame, width=30)
         self.origin_entry.grid(row=0, column=1, padx=5, pady=2)
         self.origin_entry.insert(0, "London, UK")
 
         # Destination point entry
-        ttk.Label(input_frame, text="Destination:").grid(row=1, column=0, sticky="w")
+        ttk.Label(input_frame, text="Destination:").grid(
+            row=1, column=0, sticky="e", padx=(0, 5)
+        )
         self.destination_entry = ttk.Entry(input_frame, width=30)
         self.destination_entry.grid(row=1, column=1, padx=5, pady=2)
         self.destination_entry.insert(0, "Berlin, Germany")
 
         # Year entry
         ttk.Label(input_frame, text="Year for holidays:").grid(
-            row=2, column=0, sticky="w"
+            row=2, column=0, sticky="e", padx=(0, 5)
         )
         self.year_entry = ttk.Entry(input_frame, width=10)
         self.year_entry.grid(row=2, column=1, padx=5, pady=2)
@@ -93,37 +113,47 @@ class dashboard(tk.Tk):
         results_frame = ttk.LabelFrame(self, text="Route & Country Info", padding=10)
         results_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
-        self.route_label = ttk.Label(results_frame, text="Route: (no data yet)")
+        self.route_label = ttk.Label(
+            results_frame, text="Route: (no data yet)", justify="left", wraplength=900
+        )
         self.route_label.pack(anchor="w")
 
         self.country_label = ttk.Label(
-            results_frame, text="Country info: (no data yet)"
+            results_frame,
+            text="Country info: (no data yet)",
+            justify="left",
+            wraplength=900,
         )
         self.country_label.pack(anchor="w", pady=(5, 0))
 
         self.holidays_label = ttk.Label(
-            results_frame, text="Upcoming Holidays: (no data yet)"
+            results_frame,
+            text="Upcoming Holidays: (no data yet)",
+            justify="left",
+            wraplength=900,
         )
         self.holidays_label.pack(anchor="w", pady=(5, 0))
 
         # Bottom Frame
         tab_frame = ttk.Frame(self)
         tab_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
+        tab_frame.rowconfigure(0, weight=1)
+        tab_frame.columnconfigure(0, weight=1)
 
         self.tab = ttk.Notebook(tab_frame)
         self.tab.pack(fill=tk.BOTH, expand=True)
 
         # Tab 1
         self.dest_temp_frame = ttk.Frame(self.tab, padding=10)
-        self.tab.add(self.dest_temp_frame, text= "Destination Temperature Forecast")
+        self.tab.add(self.dest_temp_frame, text="Destination Forecast")
 
         # Tab 2
         self.compare_temp_frame = ttk.Frame(self.tab, padding=10)
-        self.tab.add(self.compare_temp_frame, text="Origin Temp vs Destination Temp")
+        self.tab.add(self.compare_temp_frame, text="Origin vs Destination Temp")
 
         # Tab 3
         self.holiday_chart_frame = ttk.Frame(self.tab, padding=10)
-        self.tab.add(self.holiday_chart_frame, text= "Holiday Frequency")
+        self.tab.add(self.holiday_chart_frame, text="Holiday Frequency")
 
         # Tab 4
         self.risk_chart_frame = ttk.Frame(self.tab, padding=10)
@@ -131,33 +161,32 @@ class dashboard(tk.Tk):
 
         # export/email controls
         self.build_export_controls()
-    
+
     # Export and Email
     def build_export_controls(self):
         export_frame = ttk.Frame(self, padding=10)
-        export_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0,10))
+        export_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 10))
+
+        left_frame = ttk.Frame(export_frame)
+        left_frame.pack(side=tk.LEFT)
+
+        right_frame = ttk.Frame(export_frame)
+        right_frame.pack(side=tk.RIGHT)
 
         ttk.Button(
-            export_frame
-            , text="Save current chart"
-            , command=self.save_current_tab
+            left_frame, text="Save current chart", command=self.save_current_tab
         ).pack(side=tk.LEFT, padx=5)
 
-        ttk.Button(
-            export_frame
-            , text="Save all charts"
-            , command=self.save_all_tabs
-        ).pack(side=tk.LEFT, padx=5)
+        ttk.Button(left_frame, text="Save all charts", command=self.save_all_tabs).pack(
+            side=tk.LEFT, padx=5
+        )
 
-        ttk.Label(export_frame, text="Email report to:").pack(side=tk.LEFT, padx=(20, 5))
-
-        self.email_entry = ttk.Entry(export_frame, width=30)
+        ttk.Label(right_frame, text="Email report to:").pack(side=tk.LEFT, padx=(0, 5))
+        self.email_entry = ttk.Entry(right_frame, width=30)
         self.email_entry.pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
-            export_frame
-            , text="Send report"
-            , command=self.email_report_from_ui
+            right_frame, text="Send report", command=self.email_report_from_ui
         ).pack(side=tk.LEFT, padx=5)
 
     # UI to Controller
@@ -167,13 +196,13 @@ class dashboard(tk.Tk):
 
     def get_origin_input(self) -> str:
         return self.origin_entry.get().strip()
-    
+
     def get_destination_input(self) -> str:
         return self.destination_entry.get().strip()
-    
+
     def get_year(self) -> str:
         return self.year_entry.get().strip()
-    
+
     # Controller calls to update UI
     def show_error(self, title: str, message: str):
         messagebox.showerror(title, message)
@@ -230,7 +259,7 @@ class dashboard(tk.Tk):
                 "holiday_canvas": "holiday_hover_cid",
                 "weather_canvas": None,
                 "temp_canvas": None,
-                "risk_canvas": None
+                "risk_canvas": None,
             }
 
             hover_attr = hover_map.get(canvas_attr)
@@ -252,7 +281,7 @@ class dashboard(tk.Tk):
             setattr(self, canvas_attr, None)
 
     # Create Chart
-    def new_chart(self, canvas_attr: str, master_frame, figsize=(6,3), dpi=100):
+    def new_chart(self, canvas_attr: str, master_frame, figsize=(6, 3), dpi=100):
         """Create and draw new matplotlib charts"""
 
         self.destroy_canvas(canvas_attr)
@@ -266,8 +295,14 @@ class dashboard(tk.Tk):
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         return fig, ax
-    
-    def style_charts(self, ax, title: str | None = None, xlabel: str | None = None, ylabel: str | None = None):
+
+    def style_charts(
+        self,
+        ax,
+        title: str | None = None,
+        xlabel: str | None = None,
+        ylabel: str | None = None,
+    ):
         if title is not None:
             ax.set_title(title, fontsize=12, fontweight="bold", pad=12)
         if xlabel is not None:
@@ -275,9 +310,9 @@ class dashboard(tk.Tk):
         if ylabel is not None:
             ax.set_ylabel(ylabel, fontsize=10)
 
-        ax.tick_params(axis="both", labelsize=9)
+        ax.tick_params(axis="both", labelsize=9, length=3)
 
-        ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.4)
+        ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.4)
 
         ax.margins(x=0.05, y=0.1)
 
@@ -305,10 +340,10 @@ class dashboard(tk.Tk):
         ax.plot(short_times, temps, marker="o")
 
         self.style_charts(
-            ax
-            , title= "Temperature forecast (next 24h)"
-            , xlabel= "Time"
-            , ylabel= "Temperature (°C)"
+            ax,
+            title="Temperature forecast (next 24h)",
+            xlabel="Time",
+            ylabel="Temperature (°C)",
         )
         ax.tick_params(axis="x", rotation=45)
 
@@ -316,8 +351,13 @@ class dashboard(tk.Tk):
         self.weather_canvas.draw()
 
     # Plot Weather comparison into chart TAB 2
-    def plot_compare_weather(self, origin_weather: dict, dest_weather: dict,
-                             origin_label: str, dest_label: str):
+    def plot_compare_weather(
+        self,
+        origin_weather: dict,
+        dest_weather: dict,
+        origin_label: str,
+        dest_label: str,
+    ):
         """Compares the weather between origin and destination locations"""
 
         origin_times = origin_weather.get("times", [])
@@ -327,9 +367,11 @@ class dashboard(tk.Tk):
         dest_temps = dest_weather.get("temperature", [])
 
         if not origin_times or not origin_temps or not dest_times or not dest_temps:
-            self.show_warning("Weather comparison", "Not enough weather data to compare.")
+            self.show_warning(
+                "Weather comparison", "Not enough weather data to compare."
+            )
             return
-        
+
         # Match length for comparison
         n = min(len(origin_temps), len(dest_temps))
         origin_temps = origin_temps[:n]
@@ -339,13 +381,19 @@ class dashboard(tk.Tk):
         fig, ax = self.new_chart("temp_canvas", self.compare_temp_frame)
 
         ax.plot(x_values, origin_temps, marker="o", label=f"Origin: {origin_label}")
-        ax.plot(x_values, dest_temps, marker="o", linestyle="--", label=f"Destination: {dest_label}")
+        ax.plot(
+            x_values,
+            dest_temps,
+            marker="o",
+            linestyle="--",
+            label=f"Destination: {dest_label}",
+        )
 
         self.style_charts(
-            ax
-            , title= "Temperature comparison (next 24h)"
-            , xlabel= "Hours from now"
-            , ylabel= "Temperature (°C)"
+            ax,
+            title="Temperature comparison (next 24h)",
+            xlabel="Hours from now",
+            ylabel="Temperature (°C)",
         )
         ax.legend(fontsize=9)
 
@@ -353,26 +401,32 @@ class dashboard(tk.Tk):
         self.temp_canvas.draw()
 
     # Plot Holiday frequency into chart TAB 3
-    def plot_holiday_frequency(self, month_counts: list[int], month_labels: list[str], country_name: str, month_tooltips: list[str]):
+    def plot_holiday_frequency(
+        self,
+        month_counts: list[int],
+        month_labels: list[str],
+        country_name: str,
+        month_tooltips: list[str],
+    ):
         """Plot monthly holiday frequency and create tooltips for additional insight"""
 
         if not month_counts or not month_labels:
             self.show_warning("Holiday Frequency", "No holiday data available to plot.")
             return
-        
+
         fig, ax = self.new_chart("holiday_canvas", self.holiday_chart_frame)
 
         fig.subplots_adjust(right=0.75, left=0.25)
         bars = ax.bar(month_labels, month_counts)
 
         self.style_charts(
-        ax
-        , title= f"Public Holidays per month in {country_name}"
-        , xlabel= "Month"
-        , ylabel= "Number of Holidays"
+            ax,
+            title=f"Public Holidays per month in {country_name}",
+            xlabel="Month",
+            ylabel="Number of Holidays",
         )
         ax.tick_params(axis="x", rotation=45)
-        #fig.tight_layout()
+        # fig.tight_layout()
 
         # Tooltip references
         self.holiday_fig = fig
@@ -383,12 +437,12 @@ class dashboard(tk.Tk):
         self.holiday_tooltips = month_tooltips
 
         annot = ax.annotate(
-            ""
-            , xy=(0,0)
-            , xytext=(10, -25)
-            , textcoords=("offset points")
-            , bbox=dict(boxstyle="round", fc="white", ec="black", alpha=1.0)
-            , arrowprops=dict(arrowstyle="->", color="black")
+            "",
+            xy=(0, 0),
+            xytext=(10, -25),
+            textcoords=("offset points"),
+            bbox=dict(boxstyle="round", fc="white", ec="black", alpha=1.0),
+            arrowprops=dict(arrowstyle="->", color="black"),
         )
         annot.set_visible(False)
         self.holiday_annot = annot
@@ -402,7 +456,7 @@ class dashboard(tk.Tk):
                     if contains:
                         x = bar.get_x() + bar.get_width() / 2
                         y = bar.get_height()
-                        annot.xy = (x,y)
+                        annot.xy = (x, y)
 
                         label = month_labels[i]
                         count = month_counts[i]
@@ -411,9 +465,9 @@ class dashboard(tk.Tk):
                         annot.set_text(f"{label}: {count} holidays\n{tooltip}")
                         annot.set_visible(True)
                         self.holiday_canvas.draw_idle()
-                        visible=True
+                        visible = True
                         break
-                
+
                 if not visible and annot.get_visible():
                     annot.set_visible(False)
                     self.holiday_canvas.draw_idle()
@@ -428,7 +482,7 @@ class dashboard(tk.Tk):
 
         risk_score = max(0, min(int(risk_score), 100))
 
-        fig, ax = self.new_chart("risk_canvas", self.risk_chart_frame, figsize=(6,2.5))
+        fig, ax = self.new_chart("risk_canvas", self.risk_chart_frame, figsize=(6, 2.5))
 
         ax.barh([0], [risk_score], height=0.4)
 
@@ -437,22 +491,22 @@ class dashboard(tk.Tk):
         ax.set_xticks([0, 25, 50, 75, 100])
 
         self.style_charts(
-            ax
-            , title="Delivery Risk Score"
-            , xlabel="Risk (0 = Low, 100 = High)"
-            , ylabel=None
+            ax,
+            title="Delivery Risk Score",
+            xlabel="Risk (0 = Low, 100 = High)",
+            ylabel=None,
         )
 
         ax.grid(False)
 
         ax.text(
-            risk_score
-            , 0
-            , f"{risk_score}"
-            , va="center"
-            , ha="left"
-            , fontsize=10
-            , fontweight="bold"
+            risk_score,
+            0,
+            f"{risk_score}",
+            va="center",
+            ha="left",
+            fontsize=10,
+            fontweight="bold",
         )
 
         if explanations:
@@ -460,25 +514,25 @@ class dashboard(tk.Tk):
             expl_text = "\n".join(explanations)
             fig.subplots_adjust(bottom=0.4)
             ax.text(
-                0
-                , -0.25
-                , expl_title
-                , transform=ax.transAxes
-                , va="top"
-                , ha="left"
-                , fontsize=10
-                , fontweight="bold"
-                , wrap=True
+                0,
+                -0.25,
+                expl_title,
+                transform=ax.transAxes,
+                va="top",
+                ha="left",
+                fontsize=10,
+                fontweight="bold",
+                wrap=True,
             )
             ax.text(
-                0
-                , -0.35
-                , expl_text
-                , transform=ax.transAxes
-                , va="top"
-                , ha="left"
-                , fontsize=8
-                , wrap=True
+                0,
+                -0.35,
+                expl_text,
+                transform=ax.transAxes,
+                va="top",
+                ha="left",
+                fontsize=8,
+                wrap=True,
             )
 
         self.risk_canvas.draw()
@@ -490,14 +544,14 @@ class dashboard(tk.Tk):
         path = self.output_dir / filename
         fig.savefig(path, dpi=150, bbox_inches="tight")
         return path
-    
+
     # Find current Tab for saving
     def get_current_tab(self):
         try:
             index = self.tab.index(self.tab.select())
         except Exception:
             return None, None
-        
+
         if index == 0 and self.weather_canvas is not None:
             return self.weather_canvas.figure, "destination_temperature"
         elif index == 1 and self.temp_canvas is not None:
@@ -506,45 +560,53 @@ class dashboard(tk.Tk):
             return self.holiday_canvas.figure, "holiday_frequency"
         elif index == 3 and self.risk_canvas is not None:
             return self.risk_canvas.figure, "delivery_risk"
-        
+
         return None, None
-    
+
     # Save current tab
     def save_current_tab(self):
         fig, basename = self.get_current_tab()
         if fig is None:
             self.show_warning("Export", "No chart to save on this tab")
             return
-        
+
         path = self.save_figure(fig, basename)
         self.show_info("Export", f"Saved chart to:\n{path}")
-    
+
     # Save all tabs
     def save_all_tabs(self):
         saved_paths = []
 
         if self.weather_canvas is not None:
-            saved_paths.append(self.save_figure(self.weather_canvas.figure, "destination_temperature"))
+            saved_paths.append(
+                self.save_figure(self.weather_canvas.figure, "destination_temperature")
+            )
 
         if self.temp_canvas is not None:
-            saved_paths.append(self.save_figure(self.temp_canvas.figure, "temperature_comparison"))
+            saved_paths.append(
+                self.save_figure(self.temp_canvas.figure, "temperature_comparison")
+            )
 
         if self.holiday_canvas is not None:
-            saved_paths.append(self.save_figure(self.holiday_canvas.figure, "holiday_frequency"))
+            saved_paths.append(
+                self.save_figure(self.holiday_canvas.figure, "holiday_frequency")
+            )
 
         if self.risk_canvas is not None:
-            saved_paths.append(self.save_figure(self.risk_canvas.figure, "delivery_risk"))
+            saved_paths.append(
+                self.save_figure(self.risk_canvas.figure, "delivery_risk")
+            )
 
         if not saved_paths:
             self.show_warning("Export", "No charts are currently available to save.")
             return
-        
+
         msg = "Saved:\n" + "\n".join(str(p) for p in saved_paths)
         self.show_info("Export", msg)
 
     # Create PDF with all charts
     def create_report_pdf(self) -> Path | None:
-        figs= []
+        figs = []
 
         if self.weather_canvas is not None:
             figs.append(self.weather_canvas.figure)
@@ -561,7 +623,7 @@ class dashboard(tk.Tk):
         if not figs:
             self.show_warning("Report", "No charts available to include in the report.")
             return None
-        
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         pdf_path = self.output_dir / f"report_{ts}.pdf"
 
@@ -570,18 +632,18 @@ class dashboard(tk.Tk):
                 pdf.savefig(fig)
 
         return pdf_path
-    
+
     # Email Report button function
     def email_report_from_ui(self):
         recipient = self.email_entry.get().strip()
         if not recipient:
             self.show_warning("Email", "Please enter a recipient email address.")
             return
-        
+
         pdf_path = self.create_report_pdf()
         if pdf_path is None:
             return
-        
+
         try:
             self.send_email_with_attachment(recipient, pdf_path)
         except Exception as e:
@@ -595,16 +657,18 @@ class dashboard(tk.Tk):
         msg["Subject"] = "Route and Logistics Report"
         msg["From"] = self.smtp_from
         msg["To"] = recipient
-        msg.set_content("Attached is your latest route/logistics report from the ACDT dashboard.")
+        msg.set_content(
+            "Attached is your latest route/logistics report from the ACDT dashboard."
+        )
 
         with open(attachment_path, "rb") as f:
             data = f.read()
 
         msg.add_attachment(
-            data
-            , maintype="application"
-            , subtype="pdf"
-            , filename=os.path.basename(attachment_path)
+            data,
+            maintype="application",
+            subtype="pdf",
+            filename=os.path.basename(attachment_path),
         )
 
         with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:

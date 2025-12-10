@@ -56,11 +56,11 @@ A Travel logistics and risk planning assessment tool
     and display data visualisations to assist in decision making and planning.
 
 ## APIs Used:
-1. Rest Countries API               - Returns country metadata
-2. Open-Meteo Weather API           - Returns hourly temperature, precipitation and windspeeds
-3. Nager.Date Public Holidays API   - Returns public holiday information per country
-4. OpenRouteService API             - Returns distance and travel duration between two locations
-5. OpenCage Geocoding API           - Converts location names into latitude/longitude values
+1. Rest Countries API               - Returns country metadata (https://restcountries.com/)
+2. Open-Meteo Weather API           - Returns hourly temperature, precipitation and windspeeds (https://open-meteo.com/en/docs)
+3. Nager.Date Public Holidays API   - Returns public holiday information per country (https://date.nager.at/api)
+4. OpenRouteService API             - Returns distance and travel duration between two locations (https://openrouteservice.org/dev/#/api-docs)
+5. OpenCage Geocoding API           - Converts location names into latitude/longitude values (https://opencagedata.com/api)
 
 ## To get setup:
 1. Clone the Repo: git clone https://github.com/Barley768/50061799-ACDT-CW1.git
